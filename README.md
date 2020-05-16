@@ -1,2 +1,2 @@
-# sldb_back
-Back end of SLDB
+# About
+Back for Shramik Setu Social Network for Small Medium Big Enterprise Workers
