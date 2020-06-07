@@ -31,7 +31,7 @@ app.use('/', async (req, res) => {
         message: "Not found /"
     });
 });
-app.use('/hello', async (req, res) => {
+app.get('/hello', async (req, res) => {
     return res.status(200).json({
         message: "Hello"
     });
