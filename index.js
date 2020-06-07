@@ -26,27 +26,23 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
-app.use('/', async (req, res) => {
+
+app.use('/hello', async (req, res) => {
     return res.status(200).json({
-        message: "Not found /"
-    });
-});
-app.get('/hello', async (req, res) => {
-    return res.status(200).json({
-        message: "Hello"
+        message: "Loper"
     });
 });
 app.use('/user', UserRoute);
 app.use('/theme', ThemeRoute);
 
-if (process.env.NODE_ENV === 'production') {
-    // Exprees will serve up production assets
-    app.use(express.static(path.join(__dirname, 'build')));
+// if (process.env.NODE_ENV === 'production') {
+//     // Exprees will serve up production assets
+//     app.use(express.static(path.join(__dirname, 'build')));
 
-    // Express serve up index.html file if it doesn't recognize route
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, 'build', 'index.html'));
-    });
-}
+//     // Express serve up index.html file if it doesn't recognize route
+//     app.get('*', (req, res) => {
+//       res.sendFile(path.join(__dirname, 'build', 'index.html'));
+//     });
+// }
 app.listen(port,() => console.log(`Server is listening on port ${port}`));
 module.exports = app;
