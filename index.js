@@ -31,6 +31,11 @@ app.use('/', async (req, res) => {
         message: "Not found /"
     });
 });
+app.use('/hello', async (req, res) => {
+    return res.status(400).json({
+        message: "Hello"
+    });
+});
 app.use('/user', UserRoute);
 app.use('/theme', ThemeRoute);
 
