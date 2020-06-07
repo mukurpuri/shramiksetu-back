@@ -6,6 +6,7 @@ import cors from 'cors'
 import { UserRoute, ThemeRoute } from './routes';
 import authMiddleware from "./middlewares/auth-middleware";
 import InitiateMongoServer from './config/db';
+import path from 'path';
 
 dotenvJSON({
     path: "./.env.json"
