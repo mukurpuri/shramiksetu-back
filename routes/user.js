@@ -12,6 +12,16 @@ import Users from '../models/user';
 import UserProfile from '../models/userProfile';
 let router = express.Router();
 
+router.get(
+    "/demo",
+    async (req, res) => {
+        return res.status(400).json({
+            message: "Demo"
+        });
+    }
+  )
+
+  
 router.post(
   "/login",
   async (req, res) => {
