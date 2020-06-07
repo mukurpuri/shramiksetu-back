@@ -1,15 +1,20 @@
 const mongoose = require("mongoose");
 
 const UserProfileSchema = mongoose.Schema({
-  firstName: {
+  name: {
     type: String,
     required: true
   },
-  lastName: {
+  month: {
     type: String,
+    required: true
   },
-  dob: {
-    type: Date,
+  day: {
+    type: String,
+    required: true
+  },
+  year: {
+    type: String,
     required: true
   },
   state: {
@@ -20,10 +25,23 @@ const UserProfileSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  town: {
-      type: String,
+  sex: {
+    type: String,
+    required: true
   },
-  village: {
+  maritialStatus: {
+    type: Boolean,
+    required: true
+  },
+  education: {
+    type: String,
+    required: true
+  },
+  experience: {
+    type: String,
+    required: true
+  },
+  expertise: {
     type: String,
   },
   createdAt: {
@@ -33,4 +51,4 @@ const UserProfileSchema = mongoose.Schema({
   }
 });
 
-export default mongoose.model("users", UserProfileSchema);
+export default mongoose.model("UserProfile", UserProfileSchema);
