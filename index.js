@@ -24,7 +24,11 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
-
+app.use('/', async (req, res) => {
+    return res.status(400).json({
+        message: "Welcome to shramik setu"
+    });
+});
 app.use('/user', UserRoute);
 app.use('/theme', ThemeRoute);
 
