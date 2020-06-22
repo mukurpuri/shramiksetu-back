@@ -27,10 +27,8 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
 
-app.use('/hello', async (req, res) => {
-    return res.status(200).json({
-        message: "Loper"
-    });
+app.use('/privacy-policy', async (req, res) => {
+    return res.sendFile(path.join(__dirname + '/privacy-policy.html'));
 });
 app.use('/user', UserRoute);
 app.use('/theme', ThemeRoute);
