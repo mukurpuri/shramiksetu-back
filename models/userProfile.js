@@ -5,37 +5,21 @@ const UserProfileSchema = mongoose.Schema({
     type: String,
     required: true
   },
-  month: {
-    type: String,
-    required: true
-  },
-  day: {
-    type: String,
-    required: true
-  },
-  year: {
-    type: String,
-    required: true
-  },
-  state: {
-      type: String,
-      required: true,
-  },
-  city: {
-    type: String,
-    required: true,
-  },
   sex: {
     type: String,
     required: true
   },
-  maritialStatus: {
-    type: Boolean,
+  age: {
+    type: String,
+    required: true
+  },
+  marritalStatus: {
+    type: String,
     required: true
   },
   education: {
-    type: String,
-    required: true
+      type: String,
+      required: true,
   },
   experience: {
     type: String,
@@ -43,6 +27,22 @@ const UserProfileSchema = mongoose.Schema({
   },
   expertise: {
     type: String,
+  },
+  state: {
+    type: String,
+    required: true,
+  },
+  city: {
+    type: String,
+    required: true,
+  },
+  imageID: {
+    type: String,
+    required: true,
+  },
+  phoneNumber: {
+    type: String,
+    required: true,
   },
   createdAt: {
     type: Date,

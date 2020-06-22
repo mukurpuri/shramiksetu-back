@@ -1,3 +1,4 @@
 import UserRoute from './user';
 import ThemeRoute from './theme';
-export { UserRoute, ThemeRoute }
+import CompanyRoute from './company';
+export { UserRoute, ThemeRoute, CompanyRoute }

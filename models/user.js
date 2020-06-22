@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 
 const UserSchema = mongoose.Schema({
+  name: {
+    type: String
+  },
   phoneNumber: {
     type: String,
     required: true
@@ -15,6 +18,9 @@ const UserSchema = mongoose.Schema({
   registered: {
     type: Boolean,
     default: false
+  },
+  type: {
+    type: String,
   }
 });
 

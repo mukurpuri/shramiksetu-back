@@ -3,7 +3,7 @@ import dotenvJSON from "dotenv-json";
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import cors from 'cors'
-import { UserRoute, ThemeRoute } from './routes';
+import { UserRoute, ThemeRoute, CompanyRoute } from './routes';
 import authMiddleware from "./middlewares/auth-middleware";
 import InitiateMongoServer from './config/db';
 
@@ -34,6 +34,7 @@ app.use('/hello', async (req, res) => {
 });
 app.use('/user', UserRoute);
 app.use('/theme', ThemeRoute);
+app.use('/company', CompanyRoute);
 
 // if (process.env.NODE_ENV === 'production') {
 //     // Exprees will serve up production assets

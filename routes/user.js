@@ -1,15 +1,27 @@
+// import dotenvJSON from "dotenv-json";
+// dotenvJSON({
+//     path: "../.env.json"
+// });
+
 import { UserController } from '../controllers';
 import express from 'express';
 
 import { check, validationResult} from "express-validator";
 import bcrypt from "bcryptjs";
+import crypto from 'crypto';
 import jwt from "jsonwebtoken";
 import { validateMobileNumber, validateOTP } from '../utilities/checkers';
 import config from '../config/index';
 import { verifyJWT_MW } from '../middlewares/auth-middleware';
-import { generateOTP } from '../utilities/otps';
+import { generateOTP, sendOTP } from '../utilities/otps';
 import Users from '../models/user';
 import UserProfile from '../models/userProfile';
+
+import _ from 'lodash';
+import path from 'path';
+import multer from 'multer';
+import AvatarStorage from '../helpers/AvatarStorage';
+
 let router = express.Router();
 
 router.get(
@@ -30,6 +42,8 @@ router.post(
     } = req.body;
     if(validateMobileNumber(phoneNumber)) {
       const OTP = generateOTP(config.OTP_DIGIT_LENGTH);
+      let OTPStatus = await sendOTP(config.TwoFactorAPI, phoneNumber, OTP);
+      //console.log(OTPStatus);
       try {
         let user = await Users.findOne({ phoneNumber });
         if (user) {
@@ -39,20 +53,18 @@ router.post(
             );
             return res.status(200).json({
                 status: "pass",
-                phoneNumber: user.phoneNumber,
-                otp: OTP
+                phoneNumber: user.phoneNumber
             });
         } else {
           user = new Users({ phoneNumber, OTP });
           await user.save();
           return res.status(200).json({
             status: "pass",
-            phoneNumber: user.phoneNumber,
-            otp: OTP
+            phoneNumber: user.phoneNumber
           });
         }
     } catch (err) {
-        res.status(500).send("Error in Saving");
+        res.status(500).send(err);
     }
     
     } else {
@@ -99,7 +111,9 @@ router.post(
                                     token,
                                     isRegistered: user.registered,
                                     id: user.id,
-                                    phoneNumber: user.phoneNumber
+                                    phoneNumber: user.phoneNumber,
+                                    name: user.name,
+                                    type: user.type
                                 });
                         });
                     }
@@ -127,12 +141,13 @@ router.post(
         }
     }
 );
+
 router.post(
     "/submit-profile",
     async (req, res) => {
         try {
-            const {expertise, name, dob, sex, location, maritialStatus, education, experience, phoneNumber} = req.body.profile;
-            console.log("phonenumber", phoneNumber)
+            const {name, sex, age, marritalStatus, education, experience, expertise ,state, city, imageID, phoneNumber} = req.body.profile;
+            //console.log("phonenumber", phoneNumber)
             if(!phoneNumber) {
                 return res.status(500).json({
                     "status": "fail",
@@ -146,68 +161,36 @@ router.post(
                     "error": "User already registered"
                 });
             }
-            let errorListTemp = [];
-            
-            if(!name || name === "") {
-                errorListTemp.push(name);
-            }
-            if(!dob.month || dob.month === "") {
-                errorListTemp.push(dob.month);
-            }
-            if(!dob.day || dob.day === "") {
-                errorListTemp.push(dob.day);
-            }
-            if(!dob.year || dob.year === "") {
-                errorListTemp.push(dob.year);
-            }
-            if(!sex || sex === "") {
-                errorListTemp.push(sex);
-            }
-            if(!maritialStatus || maritialStatus === "") {
-                errorListTemp.push(maritialStatus);
-            }
-            if(!education || education === "" || education === "-1") {
-                errorListTemp.push(education);
-            }
-            if(!experience || experience === "" || experience === "-1") {
-                errorListTemp.push(experience);
-            }
-            
-            if(!location.state || location.state === "") {
-                errorListTemp.push(location.state);
-            }
-            if(!location.city || location.city === "") {
-                errorListTemp.push(location.city);
-            }
-            if(errorListTemp.length > 0) {
-                return res.json({
-                    state: errorListTemp
-                }).status(400);
-            } else {
-                if(errorListTemp.length === 0) {
-                    let userProfle = new UserProfile({
-                        name, 
-                        month: dob.month,
-                        year: dob.year,
-                        day: dob.day,
-                        sex,
-                        maritialStatus,
-                        education,
-                        experience,
-                        state: location.state,
-                        city: location.city,
-                        phoneNumber: phoneNumber,
-                        expertise: expertise
+            let userProfle = new UserProfile({
+                name,
+                sex,
+                age,
+                marritalStatus,
+                education,
+                experience,
+                expertise,
+                state,
+                city,
+                imageID,
+                phoneNumber
+            });
+            await userProfle.save();
+            await Users.updateOne(
+                {"phoneNumber": phoneNumber},
+                { $set: {registered: true, name: name}}
+            );
+            return res.status(200).send({ name,
+                sex,
+                age,
+                marritalStatus,
+                education,
+                experience,
+                expertise,
+                state,
+                city,
+                imageID,
+                phoneNumber});
 
-                    });
-                    await userProfle.save();
-                    await Users.updateOne(
-                        {"phoneNumber": phoneNumber},
-                        { $set: {registered: true}}
-                    );
-                    return res.status(200).send({ name, dob, sex, location, maritialStatus, education, experience});
-                }
-            }
         } catch (err) {
             console.log(err.message);
             res.status(500).send("Something went wrong");
@@ -215,21 +198,92 @@ router.post(
     }
 );
 
-router.get(
-    "/c/get-me",
-    async (req, res, next) => {
-        await verifyJWT_MW(req, res, next);
-    },
+router.post(
+    "/local/register",
     async (req, res) => {
         try {
-            return res.send({
-                "token": "token"
-            })
+            const { data } = req.body;
+            if(data) {
+                try {
+                  await Users.updateOne(
+                    {"phoneNumber": data.phoneNumber},
+                    { $set: {registered: true, name: data.name, type: 'Local'}}
+                  );
+                  return res.status(200).json({
+                    name: data.name,
+                    result: "pass"
+                  });
+              } catch (err) {
+                  return res.status(500).send("Error in Saving");
+              }
+              } else {
+                return res.status(400).json({
+                  message: "Error"
+                });
+              }
         } catch (err) {
             console.log(err.message);
-            res.status(500).send({err: err});
+            res.status(500).send("Something went wrong");
         }
     }
-);
+)
+var upload = multer({
+    storage: AvatarStorage({
+        square: true,
+        responsive: true,
+        greyscale: true,
+        quality: 90
+    }),
+    limits: {
+        files: 1,
+        fileSize: 200000 * 200000,
+    },
+    fileFilter: function(req, file, cb) {
+         console.log("file", file)
+        var allowedMimes = ['image/jpeg', 'image/pjpeg', 'image/png', 'image/gif'];
+        if (_.includes(allowedMimes, file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only jpg, png and gif image files are allowed.'));
+        }
+    }
+});
+router.post('/upload', upload.single("avatar"), function(req, res, next) {
+
+    var files;
+    var file = req.file.filename;
+    console.log("file---",req.file);
+    let imageID = req.file.filename.split("_")[0];
+    var matches = file.match(/^(.+?)_.+?\.(.+)$/i);
+    
+    if (matches) {
+        files = _.map(['lg', 'md', 'sm'], function(size) {
+            return matches[1] + '_' + size + '.' + matches[2];
+        });
+    } else {
+        files = [file];
+    }
+    
+    files = _.map(files, function(file) {
+        var port = req.app.get('port');
+        var base = req.protocol + '://' + req.hostname + (port ? ':' + port : '');
+        var url = path.join(req.file.baseUrl, file).replace(/[\\\/]+/g, '/').replace(/^[\/]+/g, '');
+        
+        return (req.file.storage == 'local' ? base : '') + '/' + url;
+    });
+    if(files)  {
+        return res.json({
+            images: files,
+            imageID: imageID,
+            pass: "pass"
+        });
+    } else {
+        return res.json({
+            pass: "fail"
+        });
+    }
+    
+    
+});
 
 export default router;
