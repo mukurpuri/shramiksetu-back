@@ -23,16 +23,21 @@ app.use(cors());
 app.use(bodyParser.urlencoded({
     extended: false
 }));
+
+//app.use(express.static(path.resolve('./public')));
+
 app.use(bodyParser.json());
 app.use(cookieParser());
-app.use(express.static('public'));
+
+app.use(express.static('public'))
+app.use(express.static('public/uploads/'))
+
+
 
 app.use('/privacy-policy', async (req, res) => {
     return res.sendFile(path.join(__dirname + '/privacy-policy.html'));
 });
 app.use('/user', UserRoute);
-app.use('/theme', ThemeRoute);
-app.use('/company', CompanyRoute);
 
 // if (process.env.NODE_ENV === 'production') {
 //     // Exprees will serve up production assets
@@ -43,5 +48,6 @@ app.use('/company', CompanyRoute);
 //       res.sendFile(path.join(__dirname, 'build', 'index.html'));
 //     });
 // }
+
 app.listen(port,() => console.log(`Server is listening on port ${port}`));
 module.exports = app;

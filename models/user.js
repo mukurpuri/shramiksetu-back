@@ -19,8 +19,15 @@ const UserSchema = mongoose.Schema({
     type: Boolean,
     default: false
   },
+  imageID: {
+    type: String,
+  },
   type: {
     type: String,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now()
   }
 });
 
