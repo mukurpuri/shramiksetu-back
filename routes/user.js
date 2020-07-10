@@ -5,6 +5,7 @@
 
 import { UserController } from '../controllers';
 import express from 'express';
+import moment from 'moment';
 import axios from "axios";
 import { check, validationResult} from "express-validator";
 import bcrypt from "bcryptjs";
@@ -16,6 +17,7 @@ import { verifyJWT_MW } from '../middlewares/auth-middleware';
 import { generateOTP, sendOTP } from '../utilities/otps';
 import { GetRJCovidCases } from '../utilities/APIs';
 import Users from '../models/user';
+import Questions from '../models/question';
 import UserProfile from '../models/userProfile';
 import Connections from '../models/connections';
 
@@ -24,7 +26,8 @@ import path from 'path';
 import multer from 'multer';
 import AvatarStorage from '../helpers/AvatarStorage';
 import { Connection } from 'mongoose';
-
+import question from '../models/question';
+import { ObjectId } from "mongodb";
 let router = express.Router();
 
 router.get(
@@ -149,7 +152,6 @@ router.post(
     async (req, res) => {
         try {
             const {name, sex, location, phoneNumber} = req.body.profile;
-            console.log("phonenumber", req.body.profile)
             if(!phoneNumber) {
                 return res.status(500).json({
                     "status": "fail",
@@ -274,7 +276,6 @@ router.post(
     async (req, res) => {
         try {
             const { imageID, phoneNumber } = req.body;
-            console.log(imageID, phoneNumber)
             if(phoneNumber && imageID) {
                 try {
                   await Users.updateOne(
@@ -310,13 +311,37 @@ router.get(
         const { phoneNumber, state, city } = req.query;
         if(phoneNumber && isValidState(state)) {
             const path = `https://api.covid19india.org/v3/min/data.min.json`;
+
+            let topQuestions = [];
+            let questions = await Questions.find().limit(5);
+            for(const question of questions) {
+                let user = await Users.findById(question.createdBy);
+                let askedOn  = parseInt(question.createdAt);
+                topQuestions.push(
+                    {
+                        id: question.id,
+                        askedOn: moment(askedOn).fromNow(),
+                        question: question.title,
+                        primaryAnswer: "",
+                        asker: {
+                           name: user.name,
+                           id: user.id,
+                           imageId: user.imageID
+                        },
+                        answers: 4
+                    }
+                )
+            }
+
             axios.get(path)
             .then(function (response) {
                 let stateData = response.data[state];
                 let cityData = stateData.districts[city];
+                console.log(response)
                 return res.json({
                     data: {
                         status: "pass",
+                        qas: topQuestions,
                         tracker: {
                             corona: {
                                 city: cityData,
