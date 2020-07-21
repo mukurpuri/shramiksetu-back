@@ -5,6 +5,7 @@ const config = {
     "MLMongoURI": "mongodb+srv://sldbuser:TYShUFXjDP9FEMCm@shramikseva-rk1ma.mongodb.net/shramik",
     "OTP_DIGIT_LENGTH": 4,
     JWT_SECRET: "11cGkx2XeEJjD36de3bV",
-	JWT_MAX_AGE: 821901,
+    JWT_MAX_AGE: 821901,
+    SPECIAL_ACCCOUNTS: ["1010101010", "2020202020", "1212121212"]
 }
 export default config;

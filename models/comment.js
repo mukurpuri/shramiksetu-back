@@ -7,10 +7,6 @@ var ObjectId = require('mongodb').ObjectID;
 // }
 
 var CommentSchema = new mongoose.Schema({
-      type: {
-        type: Number,
-        required: true,
-      },
       postId: {
         type: ObjectId,
         required: true,
@@ -18,9 +14,6 @@ var CommentSchema = new mongoose.Schema({
       text: {
           type: String,
           required: true,
-      },
-      media: {
-          type: [String],
       },
       votes: {
           type: [ObjectId],
@@ -32,19 +25,11 @@ var CommentSchema = new mongoose.Schema({
       },
       createdAt: {
           type: String,
-          default: moment(new Date()).format('MMMM Do YYYY, h:mm:ss a')
+          default: new Date()
       },
       endedAt: {
         type: String,
         default: null
-      },
-      tags: {
-          type: [String],
-          default: []
-      },
-      rate: {
-        type: Number,
-        default: 0
       }
 });
 

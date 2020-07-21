@@ -5,21 +5,17 @@
 
 import { UserController } from '../controllers';
 import express from 'express';
-import axios from "axios";
-import { check, validationResult} from "express-validator";
-import bcrypt from "bcryptjs";
-import crypto from 'crypto';
-import jwt from "jsonwebtoken";
-import { validateMobileNumber, validateOTP, isValidState } from '../utilities/checkers';
-import config from '../config/index';
-import { verifyJWT_MW } from '../middlewares/auth-middleware';
+import moment from 'moment';
 import Question from '../models/question';
+import Answer from '../models/answer';
+import Users from '../models/user';
+import Comment from '../models/comment';
 import QuestionReaction from '../models/questionReaction';
+import AnswerReaction from '../models/answerReaction';
 import _ from 'lodash';
-import path from 'path';
-import multer from 'multer';
-import mongoose from 'mongoose';
-import user from '../models/user';
+
+import Notification from '../models/notificaton';
+import question from '../models/question';
 
 let router = express.Router();
 
@@ -33,6 +29,7 @@ router.post(
                     title,
                     createdBy: userId,
                     categories: category,
+                    createdAt: Date.now(),
                     area
                 });
                 await question.save();
@@ -59,25 +56,114 @@ router.post(
 router.get(
     "/question",
     async (req, res) => {
-        const id = req.query[0];
-        const userId = req.query[1];
+        const { id, userId, clientId } = req.query;
         let question = await Question.findOne(
-            { _id: questionId },
-            { createdBy: userId }
+            { _id: id }
         );
+        if(!question) {
+            return res.json({
+                status: "error",
+                message: "question not found"
+            })
+        } else {
 
-        let reaction = [];
+            let views = await Question.updateOne(
+                { _id: id},
+                {$addToSet: { views: clientId } }
+            );
 
-        let questionSet = {
-            votes:  question.votes,
-            categories: question.categories,
-            reaction: reaction
+            let questioner = await Users.findById(question.createdBy);
+            let questionReaction =  await QuestionReaction.findOne(
+                { question: id, createdBy: userId }
+            );
+
+            let answers = await Answer.find({
+                questionId: id 
+            });
+            let answerSet = []
+            for(const answer of answers) {
+                let answerGivenBy = await Users.findById(answer.createdBy);
+                let rxn = {
+                    upVote: false,
+                    downVote: false,
+                    bookmark: false,
+                    flag: false
+                }
+                let answerReaction = await AnswerReaction.findOne({
+                    createdBy: userId, answer: answer.id
+                });
+                if(answerReaction) {
+                    rxn.upVote = answerReaction.upVote;
+                    rxn.downVote = answerReaction.downVote;
+                    rxn.bookmark = answerReaction.bookmark;
+                    rxn.flag = answerReaction.flag;
+                }
+                answerSet.push({
+                    title: answer.text,
+                    comments: [],
+                    id: answer.id,
+                    answerer: {
+                        id: answer.createdBy,
+                        dp: answerGivenBy.imageID || "",
+                        name: answerGivenBy.name
+                    },
+                    createdOn: moment(parseInt(answer.createdAt)).fromNow(),
+                    primaryAnswer: answer.text,
+                    showComment: false,
+                    reaction: {
+                        upVote: rxn.upVote,
+                        downVote: rxn.downVote,
+                        bookmark: rxn.bookmark,
+                        flag:  rxn.flag,
+                        votes: answer.votes
+                    }     
+                })
+            }
+
+            if(questionReaction) {
+                let questionSet = {
+                    id: question.id,
+                    createdOn: moment(parseInt(question.createdAt)).fromNow(),
+                    title: question.title,
+                    questioner: {
+                        name: questioner.name,
+                        imageID: questioner.imageID
+                    },
+                    views: question.views.length,
+                    votes:  question.votes,
+                    bookmark: questionReaction.bookmark || false,
+                    upvote: questionReaction.upVote || false,
+                    downvote: questionReaction.downVote || false,
+                    categories: question.categories || [],
+                    answerSet
+                }
+                return res.json({
+                    status: 200,
+                    content: questionSet
+                });
+            } else {
+                let questionSet = {
+                    id: question.id,
+                    createdOn: moment(parseInt(question.createdAt)).fromNow(),
+                    views: question.views.length,
+                    title: question.title,
+                    questioner: {
+                        name: questioner.name,
+                        imageID: questioner.imageID
+                    },
+                    votes:  question.votes,
+                    bookmark: false,
+                    upvote: false,
+                    downvote: false,
+                    categories: question.categories || [],
+                    answerSet
+                }
+                return res.json({
+                    status: 200,
+                    content: questionSet
+                });
+            }
         }
-
-        return res.json({
-            status: 200,
-            content: questionSet
-        });
     }
 )
 router.get(
@@ -124,16 +210,28 @@ router.post("/question-reaction",
                 });
                 await newQuestionReaction.save();
             }
-            if(reaction.voteIncrement) {
+            if(reaction.voteIncrement === "up") {
                 await Question.updateOne(
                     { _id: questionId },
                     { $inc: { votes: 1 } }
                 )
+                let question = await Question.findById({questionId});
+                let user = await Users.findById({ userId });
+                let newNotification = new Notification({
+                    userId,
+                    type: 2,
+                    postId: questionId,
+                    postTitle: question.title,
+                    postOwner: question.createdBy,
+                    engagementBy: userId
+                });
             } else {
-                await Question.updateOne(
-                    { _id: questionId },
-                    { $inc: { votes: -1 } }
-                )
+                if(reaction.voteIncrement === "down") {
+                    await Question.updateOne(
+                        { _id: questionId },
+                        { $inc: { votes: -1 } }
+                    )
+                }
             }
 
             let votes = await Question.findOne(
@@ -153,5 +251,178 @@ router.post("/question-reaction",
         }
     }
 );
+
+router.post("/answer-reaction",
+    async(req, res) => {
+        const { userId, answerId, reaction  } = req.body;
+        if(userId && answerId) {
+            let answerReaction = await AnswerReaction.findOne({
+                createdBy: userId,
+                answer: answerId
+            });
+
+            if(answerReaction) {
+               let updatedUser = await AnswerReaction.updateOne(
+                    {createdBy: userId, answer:answerId},
+                    {$set: {
+                        upVote: reaction.upVote,
+                        downVote: reaction.downVote,
+                        bookmark: reaction.bookmark,
+                        flag: reaction.flag,
+                    }}
+                );
+            } else {
+                let newAnswerReaction = new AnswerReaction({
+                    createdBy: userId,
+                    answer: answerId,
+                    upVote: reaction.upVote,
+                    downVote: reaction.downVote,
+                    bookmark: reaction.bookmark,
+                    flag: reaction.flag,
+                });
+                await newAnswerReaction.save();
+            }
+            if(reaction.voteIncrement === "up") {
+                await Answer.updateOne(
+                    { _id: answerId },
+                    { $inc: { votes: 1 } }
+                )
+                let answer = await Answer.findOne({ _id: answerId});
+                let user = await Users.findOne({ _id: userId });
+                let newNotification = new Notification({
+                    userId,
+                    type: 3,
+                    postId: answerId,
+                    postTitle: answer.text,
+                    postOwner: answer.createdBy,
+                    engagementBy: userId,
+                    imageID: user.imageID
+                });
+                await newNotification.save();
+            } else {
+                if(reaction.voteIncrement === "down") {
+                    await Answer.updateOne(
+                        { _id: answerId },
+                        { $inc: { votes: -1 } }
+                    )
+                }
+            }
+
+            let votes = await Answer.findOne(
+                { _id: answerId }
+            ).votes
+
+            return res.json({
+                status: 200,
+                reaction,
+                votes: votes
+            }) 
+        } else {
+            return res.json({
+                status: 500,
+                error: "Answer or user not present"
+            }) 
+        }
+    }
+);
+
+router.post("/submit-answer",
+    async(req, res) => {
+        const { answer, questionId, userId  } = req.body;
+        try {
+            if(answer &&  questionId  && userId) {
+                let answerWritten =  Answer({
+                    questionId,
+                    createdBy:   userId,
+                    text: answer.title,
+                    createdAt: Date.now()
+                });
+                let question = await Question.findOne({ _id: questionId});
+                if(!question.isAnswered || question.isAnswered === null) {
+                    question.isAnswered = true;
+                    await question.save();
+                }
+                let user = await Users.findOne({ _id: userId });
+                let newNotification = new Notification({
+                    userId,
+                    type: 1,
+                    postId: questionId,
+                    postTitle: question.title,
+                    postOwner: question.createdBy,
+                    engagementBy: userId,
+                    imageID: user.imageID
+                });
+                await newNotification.save();
+                await answerWritten.save();
+                return res.json({
+                    status: 200,
+                    message: "success"
+                });
+            } else {
+                return res.json({
+                    status: 500,
+                    error: "content missing"
+                })     
+            }
+        }
+        catch(err) {
+            console.log(err)
+            return res.json({
+                status: 500,
+                error: err
+            }) 
+        }
+    }
+);
+
+router.post("/comment", async(req, res) => {
+    async (req, res) => {
+        const { postId, text, userId  } = req.body;
+        if(postId && questionId && userId) {
+            //let Comment
+            let newComment = new Comment({
+                postId,
+                text,
+            });
+            await newComment.save()
+        }
+    }
+});
+
+router.post("/getQuestions", async(req, res) => {
+    const { type  } = req.body;
+    if(type) {
+        let questionsSet = [];
+        let questions = null;
+        switch(type) {
+            case "top":
+                questions = await Question.find().sort({ votes: 1 }).limit(20);
+            break;
+            case "unanswered":
+                questions = await Question.find().sort({ isAnswered: false }).limit(20);
+            break;
+        }
+        for(const question of questions) {
+            let answers  = await Answer.find({
+                questionId: question.id
+            });
+            let questionTemp = {
+                title: question.title,
+                askedOn: moment(parseInt(question.createdAt)).fromNow(),
+                tags: question.categories,
+                area: question.area,
+                votes: question.votes,
+                views: question.views.length,
+                id: question._id,
+                answers: answers.length
+            }
+            questionsSet.push(questionTemp);
+        }
+        return res.status(200).json({
+            result: "pass",
+            questionsSet
+        })
+    }
+})
 
 export default router;

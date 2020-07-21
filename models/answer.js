@@ -8,7 +8,8 @@ var AnswerSchema = new mongoose.Schema({
           required: true
       },
       votes: {
-          type: [ObjectId]
+        type: Number,
+        default: 0
       },
       medias : {
           type: []
@@ -19,7 +20,7 @@ var AnswerSchema = new mongoose.Schema({
       },
       createdAt: {
           type: String,
-          default: moment(new Date()).format('MMMM Do YYYY, h:mm:ss a')
+          default: Date.now()
       },
       questionId: {
           type: ObjectId,

@@ -3,7 +3,7 @@ import dotenvJSON from "dotenv-json";
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import cors from 'cors'
-import { UserRoute, ThemeRoute, CompanyRoute, QARoute } from './routes';
+import { UserRoute, ThemeRoute, CompanyRoute, QARoute, AreaRoute } from './routes';
 import authMiddleware from "./middlewares/auth-middleware";
 import InitiateMongoServer from './config/db';
 
@@ -39,6 +39,7 @@ app.use('/privacy-policy', async (req, res) => {
 });
 app.use('/user', UserRoute);
 app.use('/qa', QARoute);
+app.use('/areas', AreaRoute);
 
 // if (process.env.NODE_ENV === 'production') {
 //     // Exprees will serve up production assets

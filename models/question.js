@@ -22,6 +22,10 @@ var QuestionSchema = new mongoose.Schema({
           type: String,
           default: Date.now()
       },
+      isAnswered: {
+        type: Boolean,
+        default: false
+      },
       area: {
         type: String,
       },
@@ -30,6 +34,9 @@ var QuestionSchema = new mongoose.Schema({
         default: null
       },
       categories: {
+        type: []
+      },
+      views: {
         type: []
       },
       medias : {

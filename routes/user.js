@@ -7,27 +7,23 @@ import { UserController } from '../controllers';
 import express from 'express';
 import moment from 'moment';
 import axios from "axios";
-import { check, validationResult} from "express-validator";
-import bcrypt from "bcryptjs";
-import crypto from 'crypto';
 import jwt from "jsonwebtoken";
 import { validateMobileNumber, validateOTP, isValidState } from '../utilities/checkers';
 import config from '../config/index';
 import { verifyJWT_MW } from '../middlewares/auth-middleware';
 import { generateOTP, sendOTP } from '../utilities/otps';
-import { GetRJCovidCases } from '../utilities/APIs';
 import Users from '../models/user';
+import Answers from '../models/answer';
 import Questions from '../models/question';
 import UserProfile from '../models/userProfile';
 import Connections from '../models/connections';
+import Notification from '../models/notificaton';
+import Messages from '../models/message';
 
 import _ from 'lodash';
 import path from 'path';
 import multer from 'multer';
 import AvatarStorage from '../helpers/AvatarStorage';
-import { Connection } from 'mongoose';
-import question from '../models/question';
-import { ObjectId } from "mongodb";
 let router = express.Router();
 
 router.get(
@@ -48,8 +44,10 @@ router.post(
     } = req.body;
     if(validateMobileNumber(phoneNumber)) {
       let OTP = generateOTP(config.OTP_DIGIT_LENGTH);
-      //let OTPStatus = await sendOTP(config.TwoFactorAPI, phoneNumber, OTP);
-      //console.log(OTPStatus);
+    //   let OTPStatus = "";
+    //   if(!_.includes(config.SPECIAL_ACCCOUNTS)) {
+    //     OTPStatus = await sendOTP(config.TwoFactorAPI, phoneNumber, OTP);
+    //   }
       try {
         let user = await Users.findOne({ phoneNumber });
         if (user) {
@@ -308,8 +306,8 @@ router.post(
 router.get(
     "/dashboard",
     async(req, res) => {
-        const { phoneNumber, state, city } = req.query;
-        if(phoneNumber && isValidState(state)) {
+        const { id, state, city } = req.query;
+        if(id && isValidState(state)) {
             const path = `https://api.covid19india.org/v3/min/data.min.json`;
 
             let topQuestions = [];
@@ -317,27 +315,33 @@ router.get(
             for(const question of questions) {
                 let user = await Users.findById(question.createdBy);
                 let askedOn  = parseInt(question.createdAt);
+                
+                let answers = await Answers.find(
+                    { questionId: question.id },
+                );
+                let selectedAnswer = _.maxBy(answers, function(answer) { return answer.votes; });
                 topQuestions.push(
                     {
                         id: question.id,
                         askedOn: moment(askedOn).fromNow(),
                         question: question.title,
-                        primaryAnswer: "",
+                        primaryAnswer: selectedAnswer ? selectedAnswer.text : "",
                         asker: {
                            name: user.name,
                            id: user.id,
                            imageId: user.imageID
                         },
-                        answers: 4
+                        answers: answers.length
                     }
                 )
             }
+
+            
 
             axios.get(path)
             .then(function (response) {
                 let stateData = response.data[state];
                 let cityData = stateData.districts[city];
-                console.log(response)
                 return res.json({
                     data: {
                         status: "pass",
@@ -434,4 +438,48 @@ router.get("/profile",
     }
 )
 
+router.get("/notifications",
+    async(req, res) => {
+        const { userId } = req.query;
+        if(userId) {
+            let notificationQuery = await Notification.find({ postOwner: userId, isRead: false, engagementBy: { $ne: userId } });
+            let notifications = [];
+            for(const notification of notificationQuery) {
+                let userID = notification.engagementBy;
+                let user  = await Users.findOne({ _id: userID })
+                notifications.push({
+                    type: notification.type,
+                    title: notification.postTitle,
+                    engager: user.name,
+                    createdOn: notification.createdAt,
+                    imageID: user.imageID,
+                    postId: notification.postId
+                });
+            }
+            return res.status(200).json({
+                notifications
+            })
+        }
+    }
+)
+
+router.get("/getUpdates", async(req, res) => {
+    const { userId } = req.query;
+    if(userId) {
+        let messages = await Messages.find({
+            "secondary": userId, "isRead": false 
+        });
+        let notifications = await Notification.find({
+            "postOwner": userId, "isRead": false, engagementBy: { $ne: userId }
+        });
+
+        let requests = {
+            messages: messages.length,
+            notifications: notifications.length
+        }
+        return res.status(200).json({
+            requests
+        });
+    }
+})
 export default router;
