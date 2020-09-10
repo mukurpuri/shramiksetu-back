@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+var ObjectId = require('mongodb').ObjectID;
 
 const UserProfileSchema = mongoose.Schema({
   name: {
@@ -48,7 +49,6 @@ const UserProfileSchema = mongoose.Schema({
   },
   phoneNumber: {
     type: String,
-    required: true,
   },
   about: {
     type: String,
@@ -56,6 +56,10 @@ const UserProfileSchema = mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now()
+  },
+  userId: {
+    type: ObjectId,
+    required: true,
   }
 });
 

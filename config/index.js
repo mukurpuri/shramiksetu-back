@@ -6,6 +6,7 @@ const config = {
     "OTP_DIGIT_LENGTH": 4,
     JWT_SECRET: "11cGkx2XeEJjD36de3bV",
     JWT_MAX_AGE: 821901,
+    GOOGLE_GEOCODE_API: "AIzaSyA5d884IHAmT7Hpf8baRgPj9mHs6ATLjxM",
     SPECIAL_ACCCOUNTS: ["1010101010", "2020202020", "1212121212"]
 }
 export default config;

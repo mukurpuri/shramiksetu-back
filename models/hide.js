@@ -1,12 +1,17 @@
 import mongoose from 'mongoose';
+import moment from 'moment';
 var ObjectId = require('mongodb').ObjectID;
 
-var MessageSchema = new mongoose.Schema({  
-      participants: {
-        type: [String],
+var HideSchema = new mongoose.Schema({  
+      createdBy: {
+          type: ObjectId,
+          required: true,
+      },
+      type: {
+        type: Number,
         required: true,
       },
-      conversationID: {
+      entityId: {
         type: ObjectId,
         required: true,
       },
@@ -14,9 +19,6 @@ var MessageSchema = new mongoose.Schema({
           type: String,
           default: Date.now()
       },
-      isRead: {
-          type: Boolean,
-      }
 });
 
-export default mongoose.model('messages', MessageSchema);
+export default mongoose.model('hide', HideSchema);

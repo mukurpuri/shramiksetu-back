@@ -6,7 +6,7 @@ import moment from 'moment';
     1. Answer to question
     2. Upvoted your question
     3. Upvoted your answer
-    
+    4. Someone added you on their save list
 */
 
 const NotificationSchema = mongoose.Schema({
@@ -20,19 +20,16 @@ const NotificationSchema = mongoose.Schema({
   },
   postId: {
     type: ObjectId,
-    required: true
   },
   postTitle: {
     type: String,
-    required: true
   },
   postOwner: {
     type: ObjectId,
-    required: true
   },
   engagementBy: {
     type: ObjectId,
-    required: false
+    required: true
   },
   engagerName: {
     type: String,
